@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STOCK CONTROL · คลังอะไหล่</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12161D;
+    --panel:#1B212B;
+    --panel-2:#232B36;
+    --line:#2E3742;
+    --line-soft:#252D38;
+    --text:#E7EBF0;
+    --text-dim:#8996A6;
+    --text-faint:#5C6675;
+    --amber:#F0A62A;
+    --red:#E5484D;
+    --green:#3ECF8E;
+    --blue:#5B9DF5;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:28px 20px 60px;}
+
+  /* ---------- Header ---------- */
+  .header{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    margin-bottom:24px; flex-wrap:wrap; gap:16px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:15px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--text-faint); margin-bottom:6px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:28px; font-weight:700; letter-spacing:-.01em;
+  }
+  .signature{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px; font-weight:600; letter-spacing:.04em;
+    margin-top:5px;
+    background:linear-gradient(90deg, var(--blue), var(--green) 50%, var(--amber));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .sync-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .sync-status{
+    display:flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-dim);
+    background:var(--panel); border:1px solid var(--line); border-radius:20px;
+    padding:7px 14px;
+  }
+  .dot{width:7px; height:7px; border-radius:50%; background:var(--text-faint); flex-shrink:0;}
+  .dot.live{background:var(--green); box-shadow:0 0 0 0 rgba(62,207,142,.5); animation:pulse 2s infinite;}
+  .dot.error{background:var(--red);}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(62,207,142,.45);}
+    70%{box-shadow:0 0 0 6px rgba(62,207,142,0);}
+    100%{box-shadow:0 0 0 0 rgba(62,207,142,0);}
+  }
+  .icon-btn{
+    width:38px; height:38px; border-radius:10px;
+    background:var(--panel); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--text-dim); transition:.15s;
+    flex-shrink:0;
+  }
+  .icon-btn:hover{color:var(--text); border-color:#3d4a5a; background:var(--panel-2);}
+  .icon-btn svg{width:17px; height:17px;}
+  .icon-btn.spinning svg{animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ---------- Stat strip ---------- */
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px;}
+  .stat{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:16px 18px; position:relative; overflow:hidden;
+  }
+  .stat::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  }
+  .stat.total::before{background:var(--blue);}
+  .stat.low::before{background:var(--amber);}
+  .stat.out::before{background:var(--red);}
+  .stat.qtysum::before{background:var(--text-faint);}
+  .stat-label{font-size:11px; color:var(--text-dim); letter-spacing:.05em; margin-bottom:6px;}
+  .stat-value{font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:600;}
+  .stat.low .stat-value{color:var(--amber);}
+  .stat.out .stat-value{color:var(--red);}
+
+  /* ---------- Charts ---------- */
+  .chart-grid{display:grid; grid-template-columns:260px 1fr; gap:14px; margin-bottom:20px;}
+  .chart-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px;}
+  .chart-card-title{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); margin-bottom:16px; font-weight:600;}
+  .donut-wrap{display:flex; flex-direction:column; align-items:center; gap:18px;}
+  .donut-outer{position:relative; width:150px; height:150px; flex-shrink:0;}
+  .donut{width:150px; height:150px; border-radius:50%;}
+  .donut-hole{position:absolute; inset:24px; background:var(--panel); border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+  .donut-hole .num{font-family:'JetBrains Mono',monospace; font-size:24px; font-weight:700; color:var(--text);}
+  .donut-hole .lbl{font-size:10px; color:var(--text-dim); margin-top:2px;}
+  .legend{display:flex; flex-direction:column; gap:10px; width:100%;}
+  .legend-item{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-dim);}
+  .legend-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+  .legend-item .val{margin-left:auto; font-family:'JetBrains Mono',monospace; color:var(--text); font-weight:600;}
+  .data03-scroll{overflow-x:auto; max-height:260px; overflow-y:auto; border:1px solid var(--line-soft); border-radius:8px;}
+  .data03-table{width:100%; border-collapse:collapse; font-size:12px; white-space:nowrap;}
+  .data03-table thead th{
+    position:sticky; top:0; text-align:left; font-size:10.5px; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--text-faint); font-weight:600; padding:8px 10px;
+    border-bottom:1px solid var(--line); background:var(--panel-2);
+  }
+  .data03-table tbody td{padding:8px 10px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);}
+  .data03-table tbody tr:last-child td{border-bottom:none;}
+  .data03-table tbody tr:hover{background:rgba(255,255,255,.015);}
+  .mini-pagination{display:flex; align-items:center; justify-content:center; gap:12px; padding-top:12px;}
+  .page-jump{
+    width:36px; text-align:center; background:var(--panel-2); border:1px solid var(--line); border-radius:6px;
+    color:var(--text); font-family:'JetBrains Mono',monospace; font-size:12.5px; padding:3px 2px;
+    -moz-appearance:textfield;
+  }
+  .page-jump::-webkit-outer-spin-button, .page-jump::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
+  .page-jump:focus{outline:none; border-color:var(--blue);}
+  .page-btn.small{width:28px; height:28px; border-radius:7px;}
+  .page-btn.small svg{width:14px; height:14px;}
+
+  /* ---------- Pagination ---------- */
+  .pagination{display:flex; align-items:center; justify-content:center; gap:16px; padding:16px; border-top:1px solid var(--line);}
+  .page-btn{width:34px; height:34px; border-radius:8px; background:var(--panel-2); border:1px solid var(--line); color:var(--text-dim); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:.15s;}
+  .page-btn:hover:not(:disabled){color:var(--text); border-color:#3d4a5a;}
+  .page-btn:disabled{opacity:.35; cursor:not-allowed;}
+  .page-btn svg{width:16px; height:16px;}
+  .page-info{font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--text-dim);}
+
+  @media (max-width:720px){
+    .chart-grid{grid-template-columns:1fr;}
+  }
+
+  /* ---------- Filter bar ---------- */
+  .filter-bar{display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap;}
+  .search-box{
+    flex:1; min-width:220px; display:flex; align-items:center; gap:8px;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:9px 14px;
+  }
+  .search-box svg{width:15px; height:15px; color:var(--text-faint); flex-shrink:0;}
+  .search-box input{
+    background:transparent; border:none; outline:none; color:var(--text);
+    font-family:'Inter',sans-serif; font-size:13.5px; width:100%;
+  }
+  .search-box input::placeholder{color:var(--text-faint);}
+  .chips{display:flex; gap:8px; flex-wrap:wrap;}
+  .chip{
+    font-size:12.5px; padding:8px 13px; border-radius:20px;
+    background:var(--panel); border:1px solid var(--line); color:var(--text-dim);
+    cursor:pointer; transition:.15s; white-space:nowrap;
+  }
+  .chip:hover{border-color:#3d4a5a; color:var(--text);}
+  .chip.active{background:var(--blue); border-color:var(--blue); color:#0d1420; font-weight:600;}
+
+  /* ---------- Table ---------- */
+  .table-shell{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    overflow:hidden;
+  }
+  .table-scroll{overflow-x:auto;}
+  table{width:100%; min-width:520px; border-collapse:collapse;}
+  thead th{
+    text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--text-faint); font-weight:600; padding:13px 16px;
+    border-bottom:1px solid var(--line); background:var(--panel-2);
+  }
+  tbody td{padding:13px 16px; border-bottom:1px solid var(--line-soft); font-size:13.5px; vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:rgba(255,255,255,.015);}
+  .row-flag{display:flex; align-items:center; gap:10px;}
+  .flag-bar{width:4px; height:28px; border-radius:2px; flex-shrink:0;}
+  .flag-bar.ok{background:var(--green);}
+  .flag-bar.low{background:var(--amber);}
+  .flag-bar.out{background:var(--red);}
+  .part-code{
+    font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text);
+    background:var(--panel-2); border:1px dashed var(--line); border-radius:6px;
+    padding:4px 8px; display:inline-block;
+  }
+  .part-name{color:var(--text);}
+  .part-loc{font-size:11.5px; color:var(--text-faint); margin-top:2px;}
+  .badge{
+    font-size:11px; padding:4px 9px; border-radius:6px;
+    background:var(--panel-2); color:var(--text-dim); border:1px solid var(--line);
+    white-space:nowrap;
+  }
+  .qty-cell{font-family:'JetBrains Mono',monospace; font-weight:600; font-size:14px;}
+  .qty-unit{font-family:'Inter',sans-serif; font-weight:400; font-size:11.5px; color:var(--text-dim); margin-left:4px;}
+  .gauge{width:70px; height:6px; background:var(--panel-2); border-radius:3px; overflow:hidden; margin-top:6px;}
+  .gauge-fill{height:100%; border-radius:3px;}
+  .gauge-fill.ok{background:var(--green);}
+  .gauge-fill.low{background:var(--amber);}
+  .gauge-fill.out{background:var(--red);}
+  .status-pill{
+    font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:20px;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .status-pill.ok{color:var(--green); background:rgba(62,207,142,.1);}
+  .status-pill.low{color:var(--amber); background:rgba(240,166,42,.1);}
+  .status-pill.out{color:var(--red); background:rgba(229,72,77,.1);}
+  .status-pill .dot{width:6px; height:6px;}
+  .status-pill.ok .dot{background:var(--green);}
+  .status-pill.low .dot{background:var(--amber);}
+  .status-pill.out .dot{background:var(--red);}
+
+  /* ---------- Empty / error states ---------- */
+  .empty-state, .banner{
+    text-align:center; padding:70px 30px; color:var(--text-dim);
+  }
+  .empty-state svg{width:44px; height:44px; color:var(--text-faint); margin-bottom:16px;}
+  .empty-state h3{font-family:'Space Grotesk',sans-serif; font-size:18px; color:var(--text); margin-bottom:8px;}
+  .empty-state p{font-size:13.5px; max-width:380px; margin:0 auto 20px; line-height:1.6;}
+  .btn{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px;
+    padding:10px 20px; border-radius:9px; border:none; cursor:pointer;
+    background:var(--blue); color:#0d1420; transition:.15s;
+  }
+  .btn:hover{filter:brightness(1.08);}
+  .btn.secondary{background:var(--panel-2); color:var(--text); border:1px solid var(--line);}
+  .error-banner{
+    background:rgba(229,72,77,.08); border:1px solid rgba(229,72,77,.3);
+    border-radius:10px; padding:14px 16px; margin-bottom:16px;
+    font-size:13px; color:#f5a3a6; display:flex; gap:10px; align-items:flex-start;
+  }
+  .error-banner svg{width:16px; height:16px; flex-shrink:0; margin-top:1px;}
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(8,10,14,.65); backdrop-filter:blur(2px);
+    display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    width:100%; max-width:480px; padding:26px; max-height:88vh; overflow-y:auto;
+  }
+  .modal-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;}
+  .modal-head h2{font-family:'Space Grotesk',sans-serif; font-size:18px;}
+  .modal-sub{font-size:12.5px; color:var(--text-dim); margin-bottom:20px;}
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px; font-weight:600;
+  }
+  .field input, .field select{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
+    padding:10px 12px; color:var(--text); font-family:'Inter',sans-serif; font-size:13.5px; outline:none;
+  }
+  .field input:focus, .field select:focus{border-color:var(--blue);}
+  .field-hint{font-size:11.5px; color:var(--text-faint); margin-top:5px; line-height:1.5;}
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .modal-actions{display:flex; gap:10px; margin-top:22px;}
+  .modal-actions .btn{flex:1;}
+  .test-result{font-size:12.5px; margin-top:10px; padding:10px 12px; border-radius:8px; display:none;}
+  .test-result.show{display:block;}
+  .test-result.success{background:rgba(62,207,142,.1); color:var(--green);}
+  .test-result.fail{background:rgba(229,72,77,.1); color:#f5a3a6;}
+
+  @media (max-width:720px){
+    .stats{grid-template-columns:1fr 1fr;}
+  }
+  @media (max-width:520px){
+    .stats{grid-template-columns:1fr 1fr;}
+    .field-row{grid-template-columns:1fr;}
+  }
+
+  /* ---------- Mobile refinements ---------- */
+  @media (max-width:600px){
+    .wrap{padding:18px 12px 40px;}
+    .header{gap:10px;}
+    .eyebrow{font-size:10px; letter-spacing:.14em;}
+    h1{font-size:21px;}
+    .signature{font-size:10px;}
+    .sync-status{font-size:11px; padding:6px 10px; gap:6px;}
+    .icon-btn{width:34px; height:34px;}
+    .stat{padding:12px 14px;}
+    .stat-value{font-size:21px;}
+    .chart-card{padding:14px;}
+    .donut-outer, .donut{width:118px; height:118px;}
+    .donut-hole{inset:19px;}
+    .donut-hole .num{font-size:19px;}
+    .search-box{min-width:0; flex-basis:100%;}
+    .modal{padding:18px;}
+  }
+  @media (max-width:400px){
+    .stats{grid-template-columns:1fr 1fr; gap:8px;}
+    .stat{padding:10px 12px;}
+    .stat-value{font-size:18px;}
+    .sync-row{gap:8px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="header">
+    <div>
+      <div class="eyebrow">Inventory / คลังอะไหล่</div>
+      <h1>Spare Part Stock Monitor</h1>
+      <div class="signature">System By Jeerawat S.</div>
+    </div>
+    <div class="sync-row">
+      <div class="sync-status" id="syncStatus">
+        <div class="dot" id="syncDot"></div>
+        <span id="syncText">ยังไม่ได้เชื่อมต่อ</span>
+      </div>
+      <div class="icon-btn" id="refreshBtn" title="รีเฟรชข้อมูล">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+      </div>
+      <div class="icon-btn" id="settingsBtn" title="ตั้งค่าการเชื่อมต่อ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div id="errorBanner"></div>
+
+  <div class="stats" id="statsRow" style="display:none;">
+    <div class="stat total"><div class="stat-label">รายการทั้งหมด</div><div class="stat-value" id="statTotal">0</div></div>
+    <div class="stat low"><div class="stat-label">คงเหลือน้อย</div><div class="stat-value" id="statLow">0</div></div>
+    <div class="stat out"><div class="stat-label">หมดสต็อก</div><div class="stat-value" id="statOut">0</div></div>
+    <div class="stat qtysum"><div class="stat-label">รวมคงเหลือทั้งหมด</div><div class="stat-value" id="statQtySum">0</div></div>
+  </div>
+
+  <div id="chartSection"></div>
+
+  <div id="filterBar" style="display:none;">
+    <div class="filter-bar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="searchInput" placeholder="ค้นหา รหัส ชื่อ...">
+      </div>
+    </div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2>ตั้งค่าการเชื่อมต่อ</h2>
+      <div class="icon-btn" id="closeModal" style="width:32px;height:32px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </div>
+    </div>
+    <div class="modal-sub">เชื่อมต่อผ่าน Google Apps Script Web App (ไม่ต้องแชร์ Sheet แบบ public)</div>
+
+    <div class="field">
+      <label>Web App URL</label>
+      <input type="text" id="inputWebAppUrl" placeholder="https://script.google.com/macros/s/.../exec">
+      <div class="field-hint">URL ที่ได้จากการ Deploy Apps Script เป็น Web App</div>
+    </div>
+
+    <div class="field">
+      <label>API Key</label>
+      <input type="text" id="inputApiKey" placeholder="รหัสลับที่ตั้งไว้ใน Apps Script (ตัวแปร API_KEY)">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>รีเฟรชทุก</label>
+        <select id="inputInterval">
+          <option value="1">1 วินาที</option>
+          <option value="5">5 วินาที</option>
+          <option value="10">10 วินาที</option>
+          <option value="15">15 วินาที</option>
+          <option value="30" selected>30 วินาที</option>
+          <option value="60">1 นาที</option>
+          <option value="300">5 นาที</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>เกณฑ์คงเหลือน้อย (สำรอง)</label>
+        <input type="number" id="inputThreshold" placeholder="10" value="10">
+      </div>
+    </div>
+    <div class="field-hint" style="margin-top:-8px; margin-bottom:16px;">ระบบจะดึงข้อมูลอัตโนมัติ"</div>
+
+    <div class="field">
+      <label>รหัสผ่าน 4 หลัก (ป้องกันหน้าตั้งค่า)</label>
+      <input type="password" id="inputPin" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="เว้นว่าง = ใช้รหัสเดิม">
+      <div class="field-hint">ต้องกรอกรหัสนี้ทุกครั้งก่อนเข้าหน้าตั้งค่า เว้นว่างไว้ถ้าไม่ต้องการเปลี่ยนรหัสเดิม</div>
+    </div>
+
+    <div class="test-result" id="testResult"></div>
+
+    <div class="modal-actions">
+      <button class="btn secondary" id="cancelBtn">ยกเลิก</button>
+      <button class="btn" id="saveBtn">บันทึกและซิงค์</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN Lock Overlay -->
+<div class="modal-overlay" id="pinOverlay">
+  <div class="modal" style="max-width:320px;">
+    <div class="modal-head"><h2>ยืนยันรหัสผ่าน</h2>
+      <div class="icon-btn" id="pinCloseBtn" style="width:32px;height:32px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </div>
+    </div>
+    <div class="modal-sub">กรอกรหัสผ่าน 4 หลัก เพื่อเข้าสู่การตั้งค่า</div>
+
+    <div class="field">
+      <input type="password" id="pinInput" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" placeholder="••••" style="text-align:center; font-size:24px; letter-spacing:14px;">
+    </div>
+
+    <div class="test-result" id="pinError"></div>
+
+    <div class="modal-actions">
+      <button class="btn secondary" id="pinCancelBtn">ยกเลิก</button>
+      <button class="btn" id="pinConfirmBtn">ยืนยัน</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'sheet-config';
+  let config = { webAppUrl:'', apiKey:'', interval:30, threshold:10 };
+  let rows = [];
+  let searchTerm = '';
+  let currentPage = 1;
+  const PAGE_SIZE = 50;
+
+  const DATA03_SHEET_NAME = 'Data03';
+  const DATA03_PAGE_SIZE = 5;
+  let data03Cols = [];
+  let data03Rows = [];
+  let data03Page = 1;
+  let data03Error = null;
+
+  let refreshTimer = null;
+  let countdownTimer = null;
+  let lastSyncedAt = null;
+
+  const el = id => document.getElementById(id);
+  const contentEl = el('content');
+
+  // Keyword lists are priority-ordered: more specific terms first, generic
+  // catch-alls last, so e.g. "คงเหลือ" (actual remaining stock) is claimed
+  // before a generic "จำนวน" match could grab the wrong column.
+  const KEYMAP = {
+    code: ['รหัส','sku','partno','part_no','partcode'],
+    min: ['min','ขั้นต่ำ','reorder','จุดสั่งซื้อ','minimum','minstock'],
+    qty: ['คงเหลือ','balance','remaining','คงคลัง','stock','quantity','qty','จำนวน'],
+    unit: ['หน่วย','unit','uom'],
+    location: ['ที่เก็บ','location','ตำแหน่ง','bin','shelf','ชั้น'],
+    category: ['หมวด','category','group','ประเภท'],
+    name: ['รายการ','ชื่อ','name','description','รายละเอียด','partname']
+  };
+  const FIELD_ORDER = ['code','min','qty','unit','location','category','name'];
+
+  function normalize(s){ return (s||'').toString().toLowerCase().replace(/[\s_\-]/g,''); }
+
+  function buildFieldIndex(headers){
+    const used = new Set();
+    const fieldIndex = {};
+    FIELD_ORDER.forEach(field => {
+      for(const kw of KEYMAP[field]){
+        const nkw = normalize(kw);
+        let foundIdx = -1;
+        for(let i = 0; i < headers.length; i++){
+          if(used.has(i)) continue;
+          if(normalize(headers[i]).includes(nkw)){ foundIdx = i; break; }
+        }
+        if(foundIdx !== -1){ fieldIndex[field] = foundIdx; used.add(foundIdx); break; }
+      }
+    });
+    return fieldIndex;
+  }
+
+  async function loadConfig(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){
+        config = Object.assign(config, JSON.parse(raw));
+      }
+    }catch(e){ /* no config yet */ }
+    hydrateModalFields();
+  }
+
+  async function saveConfig(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    }catch(e){ console.error('storage error', e); }
+  }
+
+  function hydrateModalFields(){
+    el('inputWebAppUrl').value = config.webAppUrl || '';
+    el('inputApiKey').value = config.apiKey || '';
+    el('inputInterval').value = config.interval || 30;
+    el('inputThreshold').value = config.threshold || 10;
+  }
+
+  function showEmptyState(){
+    el('statsRow').style.display = 'none';
+    el('filterBar').style.display = 'none';
+    el('chartSection').innerHTML = '';
+    contentEl.innerHTML = `
+      <div class="table-shell">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M3 7l9 4 9-4"/></svg>
+          <h3>ยังไม่ได้เชื่อมต่อ</h3>
+          <p>ตั้งค่า Web App URL และ API Key เพื่อเริ่มดึงข้อมูลคงเหลือแบบเรียลไทม์</p>
+          <button class="btn" id="emptySetupBtn">ตั้งค่าการเชื่อมต่อ</button>
+        </div>
+      </div>`;
+    el('emptySetupBtn').onclick = requestSettingsAccess;
+  }
+
+  function setSyncState(state, text){
+    const dot = el('syncDot');
+    dot.className = 'dot' + (state === 'live' ? ' live' : state === 'error' ? ' error' : '');
+    el('syncText').textContent = text;
+  }
+
+  function timeAgo(ts){
+    if(!ts) return '';
+    const s = Math.floor((Date.now() - ts)/1000);
+    if(s < 5) return 'เมื่อสักครู่';
+    if(s < 60) return `${s} วินาทีที่แล้ว`;
+    const m = Math.floor(s/60);
+    return `${m} นาทีที่แล้ว`;
+  }
+
+  function startCountdown(){
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(()=>{
+      if(lastSyncedAt) setSyncState('live', `ซิงค์ล่าสุด ${timeAgo(lastSyncedAt)}`);
+    }, 1000);
+  }
+
+  function showError(msg){
+    el('errorBanner').innerHTML = `
+      <div class="error-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>${msg}</div>
+      </div>`;
+  }
+  function clearError(){ el('errorBanner').innerHTML = ''; }
+
+  async function fetchSheet(){
+    if(!config.webAppUrl || !config.apiKey){ showEmptyState(); return; }
+    setSyncState('syncing', 'กำลังซิงค์...');
+    el('refreshBtn').classList.add('spinning');
+    try{
+      const sep = config.webAppUrl.includes('?') ? '&' : '?';
+      const url = config.webAppUrl.trim() + sep + 'key=' + encodeURIComponent(config.apiKey);
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('เซิร์ฟเวอร์ตอบกลับผิดพลาด (HTTP ' + res.status + ')');
+      const json = await res.json();
+      if(json.error) throw new Error(json.error);
+      if(!json.main) throw new Error('รูปแบบข้อมูลไม่ถูกต้อง — ตรวจสอบโค้ด Apps Script');
+
+      const mainCols = json.main.cols || [];
+      const fieldIndex = buildFieldIndex(mainCols);
+
+      const parsed = (json.main.rows || []).map(r => {
+        const get = (i) => (i==null || r[i]==null) ? '' : r[i];
+        const qtyRaw = get(fieldIndex.qty);
+        const minRaw = get(fieldIndex.min);
+        const qty = parseFloat(qtyRaw) || 0;
+        const min = fieldIndex.min != null && minRaw !== '' ? parseFloat(minRaw) : null;
+        return {
+          code: get(fieldIndex.code) || '-',
+          name: get(fieldIndex.name) || '(ไม่มีชื่อ)',
+          category: get(fieldIndex.category) || 'ไม่ระบุ',
+          qty: qty,
+          unit: get(fieldIndex.unit) || '',
+          min: min,
+          location: get(fieldIndex.location) || ''
+        };
+      }).filter(r => r.code !== '-' || r.name !== '(ไม่มีชื่อ)');
+
+      rows = parsed;
+
+      const d03 = json.data03 || { cols: [], rows: [] };
+      data03Cols = d03.cols || [];
+      data03Rows = (d03.rows || []).slice().reverse();
+      data03Error = data03Cols.length ? null : 'ไม่พบแท็บ "' + DATA03_SHEET_NAME + '" ในชีต (ตรวจสอบชื่อแท็บใน Apps Script)';
+
+      lastSyncedAt = Date.now();
+      clearError();
+      setSyncState('live', `ซิงค์ล่าสุด ${timeAgo(lastSyncedAt)}`);
+      startCountdown();
+      render();
+    }catch(e){
+      setSyncState('error', 'เชื่อมต่อไม่สำเร็จ');
+      showError('ดึงข้อมูลจาก Web App ไม่สำเร็จ: ' + e.message + ' — ตรวจสอบว่า Web App URL และ API Key ถูกต้อง และ deploy ล่าสุดแล้ว');
+    }finally{
+      el('refreshBtn').classList.remove('spinning');
+    }
+  }
+
+  function statusOf(row){
+    if(row.qty <= 0) return 'out';
+    const threshold = (row.min != null) ? row.min : (config.threshold || 10);
+    if(row.qty <= threshold) return 'low';
+    return 'ok';
+  }
+
+  function gaugePercent(row){
+    const threshold = (row.min != null) ? row.min : (config.threshold || 10);
+    const max = Math.max(threshold * 2.5, threshold + 5, 1);
+    return Math.min(100, Math.round((row.qty / max) * 100));
+  }
+
+  function naturalCompare(a, b){
+    return (a||'').toString().localeCompare((b||'').toString(), undefined, { numeric:true, sensitivity:'base' });
+  }
+
+  function renderChart(){
+    const total = rows.length;
+    const okCount = rows.filter(r => statusOf(r) === 'ok').length;
+    const lowCount = rows.filter(r => statusOf(r) === 'low').length;
+    const outCount = rows.filter(r => statusOf(r) === 'out').length;
+
+    const okPct = total ? (okCount/total*100) : 0;
+    const lowPct = total ? (lowCount/total*100) : 0;
+    const outPct = total ? (outCount/total*100) : 0;
+    const gradient = `conic-gradient(var(--green) 0% ${okPct}%, var(--amber) ${okPct}% ${okPct+lowPct}%, var(--red) ${okPct+lowPct}% 100%)`;
+
+    el('chartSection').innerHTML = `
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-card-title">สัดส่วนสถานะสต็อก</div>
+          <div class="donut-wrap">
+            <div class="donut-outer">
+              <div class="donut" style="background:${gradient}"></div>
+              <div class="donut-hole"><div class="num">${total}</div><div class="lbl">รายการ</div></div>
+            </div>
+            <div class="legend">
+              <div class="legend-item"><span class="legend-dot" style="background:var(--green)"></span>ปกติ<span class="val">${okCount}</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--amber)"></span>คงเหลือน้อย<span class="val">${lowCount}</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--red)"></span>หมดสต็อก<span class="val">${outCount}</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-title">การดำเนินการล่าสุด</div>
+          ${renderData03Html()}
+        </div>
+      </div>`;
+
+    if(el('data03PrevBtn')){
+      el('data03PrevBtn').onclick = () => { if(data03Page > 1){ data03Page--; renderChart(); } };
+    }
+    if(el('data03NextBtn')){
+      const totalPages = Math.max(1, Math.ceil(data03Rows.length / DATA03_PAGE_SIZE));
+      el('data03NextBtn').onclick = () => { if(data03Page < totalPages){ data03Page++; renderChart(); } };
+    }
+    if(el('data03PageInput')){
+      const totalPages = Math.max(1, Math.ceil(data03Rows.length / DATA03_PAGE_SIZE));
+      const input = el('data03PageInput');
+      const jump = () => {
+        let p = parseInt(input.value, 10);
+        if(isNaN(p)) p = data03Page;
+        p = Math.min(totalPages, Math.max(1, p));
+        if(p !== data03Page){ data03Page = p; renderChart(); }
+        else{ input.value = p; }
+      };
+      input.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ input.blur(); } });
+      input.addEventListener('blur', jump);
+    }
+  }
+
+  function renderData03Html(){
+    if(data03Error){
+      return `<div style="color:var(--text-faint); font-size:12.5px; line-height:1.6;">${escapeHtml(data03Error)}</div>`;
+    }
+    if(!data03Cols.length || !data03Rows.length){
+      return `<div style="color:var(--text-faint); font-size:12.5px;">ไม่มีข้อมูล (ตรวจสอบว่ามีแท็บชื่อ "${DATA03_SHEET_NAME}" ในชีต)</div>`;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(data03Rows.length / DATA03_PAGE_SIZE));
+    if(data03Page > totalPages) data03Page = totalPages;
+    if(data03Page < 1) data03Page = 1;
+    const startIdx = (data03Page - 1) * DATA03_PAGE_SIZE;
+    const pageRows = data03Rows.slice(startIdx, startIdx + DATA03_PAGE_SIZE);
+
+    const headHtml = data03Cols.map(c => `<th>${escapeHtml(c)}</th>`).join('');
+    const bodyHtml = pageRows.map(r => `<tr>${r.map(v => `<td>${escapeHtml(v)}</td>`).join('')}</tr>`).join('');
+
+    return `
+      <div class="data03-scroll">
+        <table class="data03-table">
+          <thead><tr>${headHtml}</tr></thead>
+          <tbody>${bodyHtml}</tbody>
+        </table>
+      </div>
+      <div class="mini-pagination">
+        <div class="page-btn small" id="data03PrevBtn" title="หน้าก่อนหน้า" ${data03Page <= 1 ? 'disabled' : ''}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+        </div>
+        <div class="page-info">หน้า
+          <input type="number" class="page-jump" id="data03PageInput" min="1" max="${totalPages}" value="${data03Page}">
+          จาก ${totalPages} · ${data03Rows.length} รายการ
+        </div>
+        <div class="page-btn small" id="data03NextBtn" title="หน้าถัดไป" ${data03Page >= totalPages ? 'disabled' : ''}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+      </div>`;
+  }
+
+  function render(){
+    if(!rows.length){ showEmptyState(); return; }
+
+    const total = rows.length;
+    const lowCount = rows.filter(r => statusOf(r) === 'low').length;
+    const outCount = rows.filter(r => statusOf(r) === 'out').length;
+    const qtySum = rows.reduce((sum, r) => sum + (r.qty || 0), 0);
+
+    el('statsRow').style.display = 'grid';
+    el('statTotal').textContent = total;
+    el('statLow').textContent = lowCount;
+    el('statOut').textContent = outCount;
+    el('statQtySum').textContent = qtySum.toLocaleString();
+
+    renderChart();
+
+    el('filterBar').style.display = 'block';
+
+    let filtered = rows.filter(r => {
+      return !searchTerm || (r.code + r.name).toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    filtered.sort((a,b) => naturalCompare(a.code, b.code));
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if(currentPage > totalPages) currentPage = totalPages;
+    if(currentPage < 1) currentPage = 1;
+    const startIdx = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = filtered.slice(startIdx, startIdx + PAGE_SIZE);
+
+    const statusLabel = { ok:'ปกติ', low:'คงเหลือน้อย', out:'หมดสต็อก' };
+
+    const rowsHtml = pageItems.map(r => {
+      const st = statusOf(r);
+      const pct = gaugePercent(r);
+      return `
+      <tr>
+        <td>
+          <div class="row-flag">
+            <div class="flag-bar ${st}"></div>
+            <div>
+              <span class="part-code">${escapeHtml(r.code)}</span>
+              ${r.location ? `<div class="part-loc">${escapeHtml(r.location)}</div>` : ''}
+            </div>
+          </div>
+        </td>
+        <td class="part-name">${escapeHtml(r.name)}</td>
+        <td>
+          <div class="qty-cell">${r.qty}<span class="qty-unit">${escapeHtml(r.unit)}</span></div>
+          <div class="gauge"><div class="gauge-fill ${st}" style="width:${pct}%"></div></div>
+        </td>
+        <td><span class="status-pill ${st}"><span class="dot"></span>${statusLabel[st]}</span></td>
+      </tr>`;
+    }).join('');
+
+    contentEl.innerHTML = `
+      <div class="table-shell">
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th>รหัส</th><th>ชื่อรายการ</th><th>คงเหลือ</th><th>สถานะ</th>
+            </tr></thead>
+            <tbody>${rowsHtml || `<tr><td colspan="4" style="text-align:center; padding:40px; color:var(--text-faint);">ไม่พบรายการที่ตรงกับการค้นหา</td></tr>`}</tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <div class="page-btn" id="prevPageBtn" title="หน้าก่อนหน้า">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>
+          </div>
+          <div class="page-info">หน้า ${currentPage} จาก ${totalPages} · ทั้งหมด ${filtered.length} รายการ</div>
+          <div class="page-btn" id="nextPageBtn" title="หน้าถัดไป">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+        </div>
+      </div>`;
+
+    el('prevPageBtn').classList.toggle('page-btn', true);
+    if(currentPage <= 1) el('prevPageBtn').setAttribute('disabled','');
+    if(currentPage >= totalPages) el('nextPageBtn').setAttribute('disabled','');
+    el('prevPageBtn').onclick = () => { if(currentPage > 1){ currentPage--; render(); } };
+    el('nextPageBtn').onclick = () => { if(currentPage < totalPages){ currentPage++; render(); } };
+  }
+
+  function escapeHtml(s){
+    return s.toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function scheduleRefresh(){
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(fetchSheet, Math.max(1, config.interval) * 1000);
+  }
+
+  const PIN_KEY = 'settings-pin';
+  function getSavedPin(){ try{ return localStorage.getItem(PIN_KEY) || ''; }catch(e){ return ''; } }
+  function setSavedPin(pin){ try{ localStorage.setItem(PIN_KEY, pin); }catch(e){ /* ignore */ } }
+
+  function openModal(){
+    el('modalOverlay').classList.add('open');
+    el('testResult').className = 'test-result';
+    el('inputPin').value = '';
+  }
+  function closeModal(){ el('modalOverlay').classList.remove('open'); }
+
+  function openPinOverlay(){
+    el('pinInput').value = '';
+    el('pinError').className = 'test-result';
+    el('pinOverlay').classList.add('open');
+    setTimeout(() => el('pinInput').focus(), 50);
+  }
+  function closePinOverlay(){ el('pinOverlay').classList.remove('open'); }
+
+  function requestSettingsAccess(){
+    if(getSavedPin()){ openPinOverlay(); } else { openModal(); }
+  }
+
+  function tryPinConfirm(){
+    const entered = el('pinInput').value.trim();
+    if(entered && entered === getSavedPin()){
+      closePinOverlay();
+      openModal();
+    }else{
+      el('pinError').className = 'test-result show fail';
+      el('pinError').textContent = 'รหัสผ่านไม่ถูกต้อง';
+      el('pinInput').value = '';
+      el('pinInput').focus();
+    }
+  }
+
+  el('settingsBtn').onclick = requestSettingsAccess;
+  el('closeModal').onclick = closeModal;
+  el('cancelBtn').onclick = closeModal;
+  el('modalOverlay').addEventListener('click', (e) => { if(e.target.id === 'modalOverlay') closeModal(); });
+  el('pinConfirmBtn').onclick = tryPinConfirm;
+  el('pinCancelBtn').onclick = closePinOverlay;
+  el('pinCloseBtn').onclick = closePinOverlay;
+  el('pinOverlay').addEventListener('click', (e) => { if(e.target.id === 'pinOverlay') closePinOverlay(); });
+  el('pinInput').addEventListener('keydown', (e) => { if(e.key === 'Enter') tryPinConfirm(); });
+  el('refreshBtn').onclick = fetchSheet;
+  document.addEventListener('input', (e) => { if(e.target.id === 'searchInput'){ searchTerm = e.target.value; currentPage = 1; render(); } });
+
+  el('saveBtn').onclick = async () => {
+    const webAppUrl = el('inputWebAppUrl').value.trim();
+    const apiKey = el('inputApiKey').value.trim();
+    const interval = parseInt(el('inputInterval').value, 10) || 30;
+    const threshold = parseFloat(el('inputThreshold').value) || 10;
+    const pinRaw = el('inputPin').value.trim();
+
+    const testResult = el('testResult');
+
+    if(!webAppUrl || !apiKey){
+      testResult.className = 'test-result show fail';
+      testResult.textContent = 'กรุณาใส่ Web App URL และ API Key ให้ครบ';
+      return;
+    }
+
+    if(pinRaw && !/^\d{4}$/.test(pinRaw)){
+      testResult.className = 'test-result show fail';
+      testResult.textContent = 'รหัสผ่านต้องเป็นตัวเลข 4 หลักเท่านั้น';
+      return;
+    }
+
+    testResult.className = 'test-result show';
+    testResult.textContent = 'กำลังทดสอบการเชื่อมต่อ...';
+
+    try{
+      const sep = webAppUrl.includes('?') ? '&' : '?';
+      const testRes = await fetch(webAppUrl + sep + 'key=' + encodeURIComponent(apiKey));
+      if(!testRes.ok) throw new Error('เซิร์ฟเวอร์ตอบกลับผิดพลาด (HTTP ' + testRes.status + ')');
+      const testJson = await testRes.json();
+      if(testJson.error) throw new Error(testJson.error);
+      if(!testJson.main) throw new Error('รูปแบบข้อมูลไม่ถูกต้อง — ตรวจสอบโค้ด Apps Script');
+
+      const testCols = testJson.main.cols || [];
+      const testIndex = buildFieldIndex(testCols);
+      const mappedNames = { code:'รหัส', name:'ชื่อ', qty:'คงเหลือ', min:'ขั้นต่ำ', unit:'หน่วย', category:'หมวดหมู่', location:'ที่เก็บ' };
+      const mappedSummary = Object.keys(mappedNames)
+        .map(f => testIndex[f] != null ? `${mappedNames[f]}→"${testCols[testIndex[f]]}"` : null)
+        .filter(Boolean).join(' · ');
+
+      config = { webAppUrl, apiKey, interval, threshold };
+      await saveConfig();
+      if(pinRaw) setSavedPin(pinRaw);
+      testResult.className = 'test-result show success';
+      testResult.textContent = 'เชื่อมต่อสำเร็จ กำลังซิงค์ข้อมูล... ' + (mappedSummary ? '(จับคอลัมน์ได้: ' + mappedSummary + ')' : '');
+      scheduleRefresh();
+      await fetchSheet();
+      setTimeout(closeModal, 700);
+    }catch(e){
+      testResult.className = 'test-result show fail';
+      testResult.textContent = 'เชื่อมต่อไม่สำเร็จ: ' + e.message + ' — ตรวจสอบว่า Web App URL / API Key ถูกต้อง และ deploy เป็น "Anyone" แล้ว';
+    }
+  };
+
+  (async function init(){
+    await loadConfig();
+    if(config.webAppUrl && config.apiKey){
+      scheduleRefresh();
+      await fetchSheet();
+    }else{
+      showEmptyState();
+    }
+  })();
+})();
+</script>
+</body>
+</html>
