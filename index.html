@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>STOCK CONTROL · คลังอะไหล่</title>
+<title>STOCK Monitor · เช็คสต็อค</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -47,7 +47,7 @@
   }
   .signature{
     font-family:'JetBrains Mono',monospace;
-    font-size:11.5px; font-weight:600; letter-spacing:.04em;
+    font-size:14px; font-weight:600; letter-spacing:.04em;
     margin-top:5px;
     background:linear-gradient(90deg, var(--blue), var(--green) 50%, var(--amber));
     -webkit-background-clip:text; background-clip:text; color:transparent;
@@ -294,6 +294,31 @@
     .donut-hole .num{font-size:19px;}
     .search-box{min-width:0; flex-basis:100%;}
     .modal{padding:18px;}
+  }
+  @media (max-width:640px){
+    .table-scroll{overflow-x:visible;}
+    table{min-width:0; width:100%;}
+    thead{display:none;}
+    tbody{display:block;}
+    tr{
+      display:grid;
+      grid-template-columns:1fr auto;
+      grid-template-areas:
+        "code status"
+        "name status"
+        "qty qty";
+      column-gap:12px; row-gap:8px;
+      padding:14px 16px;
+      border-bottom:1px solid var(--line-soft);
+    }
+    tbody tr:last-child{border-bottom:none;}
+    td{display:block; padding:0; border:none; font-size:13.5px;}
+    td:nth-child(1){grid-area:code;}
+    td:nth-child(2){grid-area:name; align-self:start; padding-top:2px;}
+    td:nth-child(3){grid-area:qty; margin-top:2px;}
+    td:nth-child(4){grid-area:status; align-self:start; text-align:right;}
+    td.empty-cell{grid-column:1/-1; grid-row:1/-1;}
+    .gauge{width:100%;}
   }
   @media (max-width:400px){
     .stats{grid-template-columns:1fr 1fr; gap:8px;}
@@ -779,7 +804,7 @@
             <thead><tr>
               <th>รหัส</th><th>ชื่อรายการ</th><th>คงเหลือ</th><th>สถานะ</th>
             </tr></thead>
-            <tbody>${rowsHtml || `<tr><td colspan="4" style="text-align:center; padding:40px; color:var(--text-faint);">ไม่พบรายการที่ตรงกับการค้นหา</td></tr>`}</tbody>
+            <tbody>${rowsHtml || `<tr><td class="empty-cell" colspan="4" style="text-align:center; padding:40px; color:var(--text-faint);">ไม่พบรายการที่ตรงกับการค้นหา</td></tr>`}</tbody>
           </table>
         </div>
         <div class="pagination">
