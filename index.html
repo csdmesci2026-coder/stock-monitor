@@ -47,7 +47,7 @@
   }
   .signature{
     font-family:'JetBrains Mono',monospace;
-    font-size:14px; font-weight:600; letter-spacing:.04em;
+    font-size:15px; font-weight:600; letter-spacing:.04em;
     margin-top:5px;
     background:linear-gradient(90deg, var(--blue), var(--green) 50%, var(--amber));
     -webkit-background-clip:text; background-clip:text; color:transparent;
@@ -295,31 +295,6 @@
     .search-box{min-width:0; flex-basis:100%;}
     .modal{padding:18px;}
   }
-  @media (max-width:640px){
-    .table-scroll{overflow-x:visible;}
-    table{min-width:0; width:100%;}
-    thead{display:none;}
-    tbody{display:block;}
-    tr{
-      display:grid;
-      grid-template-columns:1fr auto;
-      grid-template-areas:
-        "code status"
-        "name status"
-        "qty qty";
-      column-gap:12px; row-gap:8px;
-      padding:14px 16px;
-      border-bottom:1px solid var(--line-soft);
-    }
-    tbody tr:last-child{border-bottom:none;}
-    td{display:block; padding:0; border:none; font-size:13.5px;}
-    td:nth-child(1){grid-area:code;}
-    td:nth-child(2){grid-area:name; align-self:start; padding-top:2px;}
-    td:nth-child(3){grid-area:qty; margin-top:2px;}
-    td:nth-child(4){grid-area:status; align-self:start; text-align:right;}
-    td.empty-cell{grid-column:1/-1; grid-row:1/-1;}
-    .gauge{width:100%;}
-  }
   @media (max-width:400px){
     .stats{grid-template-columns:1fr 1fr; gap:8px;}
     .stat{padding:10px 12px;}
@@ -333,7 +308,7 @@
 <div class="wrap">
   <div class="header">
     <div>
-      <div class="eyebrow">Inventory / คลังอะไหล่</div>
+      <div class="eyebrow">Inventory</div>
       <h1>Spare Part Stock Monitor</h1>
       <div class="signature">System By Jeerawat S.</div>
     </div>
@@ -804,7 +779,7 @@
             <thead><tr>
               <th>รหัส</th><th>ชื่อรายการ</th><th>คงเหลือ</th><th>สถานะ</th>
             </tr></thead>
-            <tbody>${rowsHtml || `<tr><td class="empty-cell" colspan="4" style="text-align:center; padding:40px; color:var(--text-faint);">ไม่พบรายการที่ตรงกับการค้นหา</td></tr>`}</tbody>
+            <tbody>${rowsHtml || `<tr><td colspan="4" style="text-align:center; padding:40px; color:var(--text-faint);">ไม่พบรายการที่ตรงกับการค้นหา</td></tr>`}</tbody>
           </table>
         </div>
         <div class="pagination">
